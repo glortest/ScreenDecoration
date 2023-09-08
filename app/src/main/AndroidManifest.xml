@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/picture"
+        android:icon="@drawable/number2"
         android:label="Tyan"
         android:roundIcon="@drawable/picture"
         android:supportsRtl="true"

@@ -14,18 +14,32 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.Toast;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
+
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import com.example.myapplication.R;
-
 public class FloatingImageService extends Service {
-    private static final int NOTIFICATION_ID = 1; // Идентификатор уведомления
-    private static final String NOTIFICATION_CHANNEL_ID = "floating_image_channel"; // Идентификатор канала уведомлений
+    private static final int NOTIFICATION_ID = 1;
+    private static final String NOTIFICATION_CHANNEL_ID = "floating_image_channel";
 
     private WindowManager windowManager;
     private View floatingView;
     private WindowManager.LayoutParams params;
+    private ImageView imageView;
+    private boolean isMoving = false;
+    private int originalImageResource;
 
     public FloatingImageService() {
     }
@@ -40,7 +54,6 @@ public class FloatingImageService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        // Создаем параметры для отображения окна поверх всех экранов
         params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -50,21 +63,21 @@ public class FloatingImageService extends Service {
         );
         params.gravity = Gravity.CENTER | Gravity.CENTER_VERTICAL;
 
-        // Получаем WindowManager
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
-        // Создаем макет и добавляем изображение в него
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
         floatingView = inflater.inflate(R.layout.floating_image_layout, null);
 
-        // Настройка изображения (здесь используется пример изображения с именем "floating_image")
-        ImageView imageView = floatingView.findViewById(R.id.imageView);
-        imageView.setImageResource(R.drawable.picture);
+        imageView = floatingView.findViewById(R.id.imageView);
+        originalImageResource = R.drawable.number2;
+        imageView.setImageResource(originalImageResource);
 
-        // Добавляем макет поверх всех виджетов
+
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(batteryReceiver, filter);
+
         windowManager.addView(floatingView, params);
 
-        // Добавляем слушателя жестов для перемещения виджета
         floatingView.setOnTouchListener(new View.OnTouchListener() {
             private int initialX;
             private int initialY;
@@ -79,13 +92,23 @@ public class FloatingImageService extends Service {
                         initialY = params.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
+                        isMoving = false;
+                        imageView.setImageResource(R.drawable.number3);
                         return true;
+
                     case MotionEvent.ACTION_MOVE:
                         int newX = initialX + (int) (event.getRawX() - initialTouchX);
                         int newY = initialY + (int) (event.getRawY() - initialTouchY);
                         params.x = newX;
                         params.y = newY;
                         windowManager.updateViewLayout(floatingView, params);
+                        isMoving = false;
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        if (!isMoving) {
+                            imageView.setImageResource(originalImageResource);
+                        }
                         return true;
                     default:
                         return false;
@@ -93,12 +116,10 @@ public class FloatingImageService extends Service {
             }
         });
 
-        // Создаем канал уведомлений (для Android 8 и выше)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel();
         }
 
-        // Запускаем службу в режиме foreground, чтобы предотвратить ее автоматическое завершение
         startForeground(NOTIFICATION_ID, buildNotification());
     }
 
@@ -115,7 +136,6 @@ public class FloatingImageService extends Service {
         return START_STICKY;
     }
 
-    // Метод для создания канала уведомлений (только для Android 8 и выше)
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -128,12 +148,43 @@ public class FloatingImageService extends Service {
         }
     }
 
-    // Метод для построения уведомления
+    private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            float batteryPct = (level / (float) scale) * 100;
+
+            if (batteryPct < 20) {
+                imageView.setImageResource(R.drawable.number4);
+                originalImageResource = R.drawable.number4;
+            } else {
+                originalImageResource = R.drawable.number2;
+                imageView.setImageResource(originalImageResource);
+            }
+            if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+                int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
+                        || status == BatteryManager.BATTERY_STATUS_FULL;
+
+                if (isCharging) {
+                    // Телефон заряжается, установите изображение для этого состояния
+                    originalImageResource = R.drawable.picture;
+                    imageView.setImageResource(R.drawable.picture); // Замените на ресурс изображения для зарядки
+                } else {
+                    // Телефон не заряжается, верните исходное изображение
+                    originalImageResource = R.drawable.number2;
+                    imageView.setImageResource(originalImageResource);
+                }
+            }
+        }
+    };
+
     private Notification buildNotification() {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("Floating Image Service")
                 .setContentText("Виджет активен")
-                .setSmallIcon(R.drawable.picture)
+                .setSmallIcon(originalImageResource)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
 
         return builder.build();
