@@ -24,13 +24,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.startButton).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Проверяем, предоставлено ли разрешение на SYSTEM_ALERT_WINDOW
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(MainActivity.this)) {
-                    // Если разрешение не предоставлено, запрашиваем его с помощью системного диалога
+
                     requestSystemAlertWindowPermission();
                 } else {
-                    // Если разрешение уже предоставлено или устройство работает на более старой версии Android
-                    // Запускаем службу для отображения изображения
                     startFloatingImageService();
                 }
             }
@@ -55,11 +53,8 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SYSTEM_ALERT_WINDOW_PERMISSION) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                // Разрешение было предоставлено, запускаем службу
                 startFloatingImageService();
             } else {
-                // Разрешение не было предоставлено, обработайте это соответствующим образом
-                // Можете показать пользователю сообщение о том, что без разрешения приложение не сможет отображать виджеты поверх экрана.
             }
         }
     }
