@@ -9,12 +9,21 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/number2"
+        android:icon="@drawable/nothing"
         android:label="Tyan"
-        android:roundIcon="@drawable/picture"
+        android:roundIcon="@drawable/power"
         android:supportsRtl="true"
         android:theme="@style/Base.Theme.MyApplication"
         tools:targetApi="31">
+        <service
+            android:name=".MyNotificationListenerService"
+            android:label="My Notification Listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <service
             android:name=".FloatingImageService"
             android:enabled="true"

@@ -39,6 +39,7 @@ public class FloatingImageService extends Service {
     private WindowManager.LayoutParams params;
     private ImageView imageView;
     private boolean isMoving = false;
+    private static boolean hasNotification = false;
     private int originalImageResource;
 
     public FloatingImageService() {
@@ -69,7 +70,7 @@ public class FloatingImageService extends Service {
         floatingView = inflater.inflate(R.layout.floating_image_layout, null);
 
         imageView = floatingView.findViewById(R.id.imageView);
-        originalImageResource = R.drawable.number2;
+        originalImageResource = R.drawable.nothing;
         imageView.setImageResource(originalImageResource);
 
 
@@ -93,7 +94,7 @@ public class FloatingImageService extends Service {
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
                         isMoving = false;
-                        imageView.setImageResource(R.drawable.number3);
+                        imageView.setImageResource(R.drawable.move);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
@@ -119,6 +120,9 @@ public class FloatingImageService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel();
         }
+
+        IntentFilter filter2 = new IntentFilter("com.example.myapplication.NOTIFICATION_UPDATE");
+        registerReceiver(notificationUpdateReceiver, filter2);
 
         startForeground(NOTIFICATION_ID, buildNotification());
     }
@@ -148,6 +152,16 @@ public class FloatingImageService extends Service {
         }
     }
 
+    private BroadcastReceiver notificationUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.hasExtra("hasNotification")) {
+                hasNotification = intent.getBooleanExtra("hasNotification", false);
+                updateWidgetImage();
+            }
+        }
+    };
+
     private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -156,10 +170,10 @@ public class FloatingImageService extends Service {
             float batteryPct = (level / (float) scale) * 100;
 
             if (batteryPct < 20) {
-                imageView.setImageResource(R.drawable.number4);
-                originalImageResource = R.drawable.number4;
+                imageView.setImageResource(R.drawable.need_power);
+                originalImageResource = R.drawable.need_power;
             } else {
-                originalImageResource = R.drawable.number2;
+                originalImageResource = R.drawable.nothing;
                 imageView.setImageResource(originalImageResource);
             }
             if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
@@ -168,17 +182,24 @@ public class FloatingImageService extends Service {
                         || status == BatteryManager.BATTERY_STATUS_FULL;
 
                 if (isCharging) {
-                    // Телефон заряжается, установите изображение для этого состояния
-                    originalImageResource = R.drawable.picture;
-                    imageView.setImageResource(R.drawable.picture); // Замените на ресурс изображения для зарядки
+                    originalImageResource = R.drawable.power;
+                    imageView.setImageResource(R.drawable.power);
                 } else {
-                    // Телефон не заряжается, верните исходное изображение
-                    originalImageResource = R.drawable.number2;
+                    originalImageResource = R.drawable.nothing;
                     imageView.setImageResource(originalImageResource);
                 }
             }
         }
     };
+    private void updateWidgetImage() {
+        if (hasNotification) {
+            imageView.setImageResource(R.drawable.ic_launcher_foreground);
+            originalImageResource = R.drawable.ic_launcher_foreground;
+        } else {
+            imageView.setImageResource(R.drawable.nothing);
+            originalImageResource = R.drawable.nothing;
+        }
+    }
 
     private Notification buildNotification() {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
